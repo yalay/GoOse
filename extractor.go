@@ -136,7 +136,6 @@ func (extr *ContentExtractor) GetMetaLanguage(document *goquery.Document) string
 		}
 	}
 
-	extr.config.targetLanguage = language
 	return language
 }
 

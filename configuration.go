@@ -35,8 +35,8 @@ func GetDefaultConfiguration(args ...string) Configuration {
 			localStoragePath:        "",   //not used in this version
 			imagesMinBytes:          4500, //not used in this version
 			enableImageFetching:     true,
-			useMetaLanguage:         true,
-			targetLanguage:          "en",
+			useMetaLanguage:         false,
+			targetLanguage:          "zh",
 			imageMagickConvertPath:  "/usr/bin/convert",  //not used in this version
 			imageMagickIdentifyPath: "/usr/bin/identify", //not used in this version
 			browserUserAgent:        defaultUserAgent,

@@ -115,9 +115,67 @@ func (formatter *outputFormatter) Text(s *goquery.Selection) string {
 	return buf.String()
 }
 
+func (formatter *outputFormatter) RichText(s *goquery.Selection) string {
+	var buf bytes.Buffer
+
+	// Slightly optimized vs calling Each: no single selection object created
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		if n.Type == html.TextNode && 0 == n.DataAtom { // NB: had to add the DataAtom check to avoid printing text twice when a textual node embeds another textual node
+			// Keep newlines and spaces, like jQuery
+			buf.WriteString(n.Data)
+		}
+
+		if "img" == n.DataAtom.String() {
+			value, exist := getAttributeValue("src", n)
+			if !exist {
+				value, exist = getAttributeValue("data-src", n)
+				if !exist {
+					value, _ = getAttributeValue("data-lazy-src", n)
+				}
+			}
+
+			buf.WriteString(`<img src="` + value + `">`)
+		}
+
+		if n.FirstChild != nil {
+			for c := n.FirstChild; c != nil; c = c.NextSibling {
+				f(c)
+			}
+		}
+	}
+	for _, n := range s.Nodes {
+		f(n)
+	}
+
+	return buf.String()
+}
+
+// Private function to get the specified attribute's value from a node.
+func getAttributeValue(attrName string, n *html.Node) (val string, exists bool) {
+	if a := getAttributePtr(attrName, n); a != nil {
+		val = a.Val
+		exists = true
+	}
+	return
+}
+
+func getAttributePtr(attrName string, n *html.Node) *html.Attribute {
+	if n == nil {
+		return nil
+	}
+
+	for i, a := range n.Attr {
+		if a.Key == attrName {
+			return &n.Attr[i]
+		}
+	}
+	return nil
+}
+
 func (formatter *outputFormatter) getOutputText() string {
 	//out := formatter.topNode.Text()
-	out := formatter.Text(formatter.topNode)
+	out := formatter.RichText(formatter.topNode)
 	out = normalizeWhitespaceRegexp.ReplaceAllString(out, " ")
 
 	strArr := strings.Split(out, "\n")

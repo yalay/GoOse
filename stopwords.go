@@ -72,21 +72,32 @@ func (stop *StopWords) stopWordsCount(lang string, text string) wordStats {
 	}
 	ws := wordStats{}
 	stopWords := set.New()
-	text = strings.ToLower(text)
-	items := strings.Split(text, " ")
 	stops := stop.cachedStopWords[lang]
 	count := 0
 	if stops != nil {
-		for _, item := range items {
-			if stops.Has(item) {
-				stopWords.Add(item)
-				count++
+		if lang == "zh" {
+			for _, item := range text {
+				if stops.Has(string(item)) {
+					stopWords.Add(item)
+					count++
+				}
 			}
+			ws.wordCount = len(text)
+		} else {
+			text = strings.ToLower(text)
+			items := strings.Split(text, " ")
+			for _, item := range items {
+				if stops.Has(item) {
+					stopWords.Add(item)
+					count++
+				}
+			}
+			ws.wordCount = len(items)
 		}
+
 	}
 
 	ws.stopWordCount = stopWords.Size()
-	ws.wordCount = len(items)
 	ws.stopWords = stopWords
 
 	return ws
@@ -2026,6 +2037,46 @@ skarpt
 kritiserade
 `,
 	"zh": `
+、
+。
+〈
+〉
+《
+》
+︿
+！
+＃
+＄
+％
+＆
+（
+）
+＊
+＋
+，
+０
+１
+２
+３
+４
+５
+６
+７
+８
+９
+：
+；
+＜
+＞
+？
+＠
+［
+］
+｛
+｜
+｝
+～
+￥
 的
 一
 不
@@ -2151,6 +2202,42 @@ kritiserade
 着
 诸
 自
+爲
+於
+他
+而
+後
+這
+與
+並
+個
+無
+們
+被
+趁
+當
+從
+爾
+該
+給
+還
+即
+幾
+既
+據
+麼
+們
+憑
+卻
+讓
+誰
+雖
+隨
+沿
+喲
+於
+則
+諸
 `,
 	"ru": `
 а
