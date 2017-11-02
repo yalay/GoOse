@@ -130,10 +130,7 @@ func (c Crawler) Crawl() (*Article, error) {
 		return article, nil
 	}
 
-	extractor := NewExtractor(c.config)
-
 	startTime := time.Now().UnixNano()
-
 	article.RawHTML, err = document.Html()
 	if nil != err {
 		return nil, err
@@ -141,39 +138,26 @@ func (c Crawler) Crawl() (*Article, error) {
 	article.FinalURL = c.url
 	article.Doc = document
 
+	extractor := NewExtractor(c.config)
 	article.Title = extractor.GetTitle(document)
 	article.MetaLang = extractor.GetMetaLanguage(document)
 	article.MetaFavicon = extractor.GetFavicon(document)
-
 	article.MetaDescription = extractor.GetMetaContentWithSelector(document, "meta[name#=(?i)^description$]")
 	article.MetaKeywords = extractor.GetMetaContentWithSelector(document, "meta[name#=(?i)^keywords$]")
 	article.CanonicalLink = extractor.GetCanonicalLink(document)
 	if "" == article.CanonicalLink {
 		article.CanonicalLink = article.FinalURL
 	}
+
 	article.Domain = extractor.GetDomain(article.CanonicalLink)
 	article.Tags = extractor.GetTags(document)
-
-	cleaner := NewCleaner(c.config)
-	article.Doc = cleaner.Clean(article.Doc)
-
 	article.TopImage = OpenGraphResolver(document)
 	if article.TopImage == "" {
 		article.TopImage = WebPageResolver(article)
 	}
 
 	article.TopNode = extractor.CalculateBestNode(document)
-	if article.TopNode != nil {
-		article.TopNode = extractor.PostCleanup(article.TopNode)
-
-		article.CleanedText, article.Links = extractor.GetCleanTextAndLinks(article.TopNode, article.MetaLang)
-
-		videoExtractor := NewVideoExtractor()
-		article.Movies = videoExtractor.GetVideos(document)
-	}
-
 	article.Delta = time.Now().UnixNano() - startTime
-
 	return article, nil
 }
 
