@@ -157,6 +157,9 @@ func (c Crawler) Crawl() (*Article, error) {
 	}
 
 	article.TopNode = extractor.CalculateBestNode(document)
+	if article.TopNode != nil {
+		article.TopNode = extractor.CleanupArea(article.TopNode)
+	}
 	article.Delta = time.Now().UnixNano() - startTime
 	return article, nil
 }

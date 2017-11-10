@@ -658,3 +658,31 @@ func (extr *ContentExtractor) PostCleanup(targetNode *goquery.Selection) *goquer
 	})
 	return node
 }
+
+// remove a href. remove h1. replace hx.
+func (extr *ContentExtractor) CleanupArea(targetNode *goquery.Selection) *goquery.Selection {
+	if extr.config.debug {
+		log.Println("Starting cleanup Node")
+	}
+	targetNode.Find("a").Each(func(i int, s *goquery.Selection) {
+		s.RemoveAttr("href")
+	})
+
+	targetNode.Find("h1").Remove()
+	for _, headLabel := range []string{"h2", "h3", "h4", "h5", "h6"} {
+		targetNode.Find(headLabel).Each(func(i int, s *goquery.Selection) {
+			replaceLabel(s, atom.B)
+		})
+	}
+
+	return targetNode
+}
+
+func replaceLabel(div *goquery.Selection, newAtom atom.Atom) {
+	if div.Size() > 0 {
+		node := div.Get(0)
+		node.Data = newAtom.String()
+		node.DataAtom = newAtom
+		node.Attr = []html.Attribute{}
+	}
+}
