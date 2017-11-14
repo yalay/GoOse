@@ -158,7 +158,7 @@ func (c Crawler) Crawl() (*Article, error) {
 
 	article.TopNode = extractor.CalculateBestNode(document)
 	if article.TopNode != nil {
-		article.TopNode = extractor.CleanupArea(article.TopNode)
+		article.TopNode = extractor.CleanupArea(article.TopNode, article.FinalURL)
 	}
 	article.Delta = time.Now().UnixNano() - startTime
 	return article, nil
@@ -187,7 +187,7 @@ func (c *Crawler) fetchHTML(u string, timeout time.Duration) string {
 		return ""
 	}
 
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_7) AppleWebKit/534.30 (KHTML, like Gecko) Chrome/12.0.742.91 Safari/534.30")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 7_0 like Mac OS X) AppleWebKit/537.51.1 (KHTML, like Gecko) Version/7.0 Mobile/11A465 Safari/9537.53")
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Println(err.Error())

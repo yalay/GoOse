@@ -30,7 +30,9 @@ var titleDelimiters = []string{
 
 var aRelTagSelector = "a[rel=tag]"
 var aHrefTagSelector = [...]string{"/tag/", "/tags/", "/topic/", "?keyword"}
-
+var instagramIframePrefix = `<iframe src="`
+var instagramIframeSuffix = `embed/captioned/" allowtransparency="true" frameborder="0" width="100%" height="900"></iframe>`
+var realImgSrcAttrs   = [...]string{"data-src", "data-lazy-src"}
 //var langRegEx = "^[A-Za-z]{2}$"
 
 // ContentExtractor can parse the HTML and fetch various properties
@@ -660,20 +662,47 @@ func (extr *ContentExtractor) PostCleanup(targetNode *goquery.Selection) *goquer
 }
 
 // remove a href. remove h1. replace hx.
-func (extr *ContentExtractor) CleanupArea(targetNode *goquery.Selection) *goquery.Selection {
+func (extr *ContentExtractor) CleanupArea(targetNode *goquery.Selection, siteUrl string) *goquery.Selection {
 	if extr.config.debug {
 		log.Println("Starting cleanup Node")
 	}
 	targetNode.Find("a").Each(func(i int, s *goquery.Selection) {
-		s.RemoveAttr("href")
+		if urlValue, exists := s.Attr("href"); exists {
+			if strings.HasPrefix(urlValue, "https://www.instagram.com") {
+				s.SetHtml(instagramIframePrefix + urlValue + instagramIframeSuffix)
+			}
+			s.RemoveAttr("href")
+		}
 	})
 
 	targetNode.Find("h1").Remove()
 	for _, headLabel := range []string{"h2", "h3", "h4", "h5", "h6"} {
-		targetNode.Find(headLabel).Each(func(i int, s *goquery.Selection) {
+		targetNode.Find(headLabel).Each(func(_ int, s *goquery.Selection) {
 			replaceLabel(s, atom.B)
 		})
 	}
+
+	parsedUrl, _ := url.Parse(siteUrl)
+	targetNode.Find("img").Each(func(_ int, s *goquery.Selection) {
+		for _, srcAttr := range realImgSrcAttrs {
+			if srcValue, exists := s.Attr(srcAttr); exists {
+				s.SetAttr("src", srcValue)
+				break
+			}
+		}
+
+		if srcValue, exists := s.Attr("src"); exists {
+			if !strings.HasPrefix(srcValue, "http") {
+				if strings.HasPrefix(srcValue, "/") {
+					// 相对根目录
+					s.SetAttr("src", parsedUrl.Scheme+"://"+parsedUrl.Host+srcValue)
+				} else {
+					// 相对当前目录
+					s.SetAttr("src", parsedUrl.Scheme+"://"+parsedUrl.Host+parsedUrl.Path+srcValue)
+				}
+			}
+		}
+	})
 
 	return targetNode
 }
