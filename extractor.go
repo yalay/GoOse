@@ -661,12 +661,8 @@ func (extr *ContentExtractor) PostCleanup(targetNode *goquery.Selection) *goquer
 	return node
 }
 
-// remove a href. remove h1. replace hx.
-func (extr *ContentExtractor) CleanupArea(targetNode *goquery.Selection, siteUrl string) *goquery.Selection {
-	if extr.config.debug {
-		log.Println("Starting cleanup Node")
-	}
-	targetNode.Find("a").Each(func(i int, s *goquery.Selection) {
+func (extr *ContentExtractor) CleanStyle(doc *goquery.Document) {
+	doc.Find("a").Each(func(i int, s *goquery.Selection) {
 		if urlValue, exists := s.Attr("href"); exists {
 			if strings.HasPrefix(urlValue, "https://www.instagram.com") {
 				s.SetHtml(instagramIframePrefix + urlValue + instagramIframeSuffix)
@@ -675,15 +671,14 @@ func (extr *ContentExtractor) CleanupArea(targetNode *goquery.Selection, siteUrl
 		}
 	})
 
-	targetNode.Find("h1").Remove()
-	for _, headLabel := range []string{"h2", "h3", "h4", "h5", "h6"} {
-		targetNode.Find(headLabel).Each(func(_ int, s *goquery.Selection) {
-			replaceLabel(s, atom.B)
-		})
-	}
+	doc.Find("img").Each(func(_ int, s *goquery.Selection) {
+		if styleValue, exists := s.Attr("style"); exists {
+			if removeVisibilityStyleRegEx.MatchString(styleValue) {
+				s.Remove()
+				return
+			}
+		}
 
-	parsedUrl, _ := url.Parse(siteUrl)
-	targetNode.Find("img").Each(func(_ int, s *goquery.Selection) {
 		for _, srcAttr := range realImgSrcAttrs {
 			if srcValue, exists := s.Attr(srcAttr); exists {
 				s.SetAttr("src", srcValue)
@@ -692,17 +687,55 @@ func (extr *ContentExtractor) CleanupArea(targetNode *goquery.Selection, siteUrl
 		}
 
 		if srcValue, exists := s.Attr("src"); exists {
-			if !strings.HasPrefix(srcValue, "http") {
-				if strings.HasPrefix(srcValue, "/") {
-					// 相对根目录
-					s.SetAttr("src", parsedUrl.Scheme+"://"+parsedUrl.Host+srcValue)
-				} else {
-					// 相对当前目录
-					s.SetAttr("src", parsedUrl.Scheme+"://"+parsedUrl.Host+parsedUrl.Path+srcValue)
+			srcUrl, err := url.Parse(srcValue)
+			if err != nil {
+				return
+			}
+
+			if srcUrl.Scheme == "" {
+				srcUrl.Scheme = doc.Url.Scheme
+				if srcUrl.Host == "" {
+					srcUrl.Host = doc.Url.Host
 				}
+
+				s.SetAttr("src", srcUrl.String())
 			}
 		}
 	})
+
+	doc.Find("iframe").Each(func(_ int, s *goquery.Selection) {
+		srcValue, exists := s.Attr("src")
+		if !exists {
+			return
+		}
+
+		if !strings.Contains(srcValue, "youtube.com") {
+			return
+		}
+
+		heightValue, exists := s.Attr("height")
+		if !exists {
+			return
+		}
+
+		if heightValue == "100%" {
+			s.SetAttr("height", "315")
+		}
+	})
+}
+
+// remove a href. remove h1. replace hx.
+func (extr *ContentExtractor) CleanTopNode(targetNode *goquery.Selection) *goquery.Selection {
+	if extr.config.debug {
+		log.Println("Starting cleanup Node")
+	}
+
+	targetNode.Find("h1").Remove()
+	for _, headLabel := range []string{"h2", "h3", "h4", "h5", "h6"} {
+		targetNode.Find(headLabel).Each(func(_ int, s *goquery.Selection) {
+			replaceLabel(s, atom.B)
+		})
+	}
 
 	return targetNode
 }

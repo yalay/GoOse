@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/cookiejar"
+	"net/url"
 	"strings"
 	"time"
 
@@ -130,6 +131,10 @@ func (c Crawler) Crawl() (*Article, error) {
 		return article, nil
 	}
 
+	if document.Url == nil {
+		document.Url, _ = url.Parse(c.url)
+	}
+
 	startTime := time.Now().UnixNano()
 	article.RawHTML, err = document.Html()
 	if nil != err {
@@ -156,9 +161,10 @@ func (c Crawler) Crawl() (*Article, error) {
 		article.TopImage = WebPageResolver(article)
 	}
 
+	extractor.CleanStyle(document)
 	article.TopNode = extractor.CalculateBestNode(document)
 	if article.TopNode != nil {
-		article.TopNode = extractor.CleanupArea(article.TopNode, article.FinalURL)
+		article.TopNode = extractor.CleanTopNode(article.TopNode)
 	}
 	article.Delta = time.Now().UnixNano() - startTime
 	return article, nil
